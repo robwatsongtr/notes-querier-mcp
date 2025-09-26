@@ -20,25 +20,29 @@ notes-querier-mcp/
 
 ## Technical Details
 
-### macOS Notes Database
-- **Location**: `~/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite`
-- **Key Tables**:
-  - `ZICCLOUDSYNCINGOBJECT`: Contains note metadata, titles, folder info
-  - `ZICNOTEDATA`: Contains actual note content in compressed protobuf format
-- **Data Format**: Note content is gzipped protobuf data in `ZICNOTEDATA.ZDATA` column
-- **Schema Evolution**: Database structure changed significantly after iOS 9
+### AppleScript Notes Access
+- **Approach**: Use AppleScript to access encrypted Notes data through the Notes.app API
+- **Key Properties**:
+  - `name` (text, read-only): The name/title of the note
+  - `id` (text, read-only): Unique identifier for the note
+  - `body` (text): HTML content of the note
+  - `creation date` (date, read-only): When the note was created
+  - `modification date` (date, read-only): When the note was last modified
+  - `container` (account or folder, read-only): Where the note is stored
+- **Data Format**: Note content is HTML markup, accessible without decryption
+- **Accounts**: Supports iCloud, Exchange, and local accounts
 
 ### MCP Server Components
 
-#### 1. Notes Database Reader (`notes_reader.py`)
-**Purpose**: Handle SQLite database access and data parsing
+#### 1. AppleScript Notes Reader (`notes_reader.py`)
+**Purpose**: Handle AppleScript execution and data parsing
 
 **Key Functions**:
-- Connect to Notes SQLite database
-- Parse gzipped protobuf data from ZICNOTEDATA table
-- Extract note metadata from ZICCLOUDSYNCINGOBJECT table
-- Handle both local and iCloud-synced notes
-- Parse embedded objects/attachments
+- Execute AppleScript commands to access Notes.app
+- Parse HTML content from note bodies
+- Extract note metadata (name, id, dates, container)
+- Handle multiple account types (iCloud, Exchange, local)
+- Process and clean HTML content for text extraction
 
 #### 2. MCP Server Implementation (`server.py`)
 **Purpose**: FastMCP server with STDIO transport
@@ -53,29 +57,30 @@ notes-querier-mcp/
 #### 3. Dependencies & Setup
 **Required Packages**:
 - `fastmcp`: MCP server framework
-- `protobuf`: For parsing protobuf data
-- `sqlite3`: Built-in Python SQLite support
+- `subprocess`: Built-in Python for AppleScript execution
+- `html2text` or `beautifulsoup4`: For HTML content parsing
 
 **Setup Requirements**:
 - Python 3.10+
 - Virtual environment setup
-- Error handling for database permissions
+- macOS system with Notes.app accessible
+- AppleScript permissions for automation
 - Logging configuration (stderr only, never stdout for STDIO servers)
 
 ## Implementation Steps
 
-### Phase 1: Database Exploration
-1. Create basic SQLite connection to Notes database
-2. Explore schema and understand table relationships
-3. Test data extraction from key tables
-4. Document database structure findings
+### Phase 1: AppleScript Testing
+1. Create basic AppleScript commands to access Notes.app
+2. Test reading note properties and content
+3. Explore account and folder enumeration
+4. Document AppleScript command patterns
 
 ### Phase 2: Notes Reader Development
-1. Implement SQLite connection with error handling
-2. Build protobuf data decompression (gzip)
-3. Parse note content from ZICNOTEDATA.ZDATA
-4. Extract metadata from ZICCLOUDSYNCINGOBJECT
-5. Handle different note types and embedded objects
+1. Implement AppleScript execution wrapper in Python
+2. Build HTML content parsing and text extraction
+3. Extract note metadata from AppleScript results
+4. Handle different account types and folder structures
+5. Process and clean HTML content for search functionality
 
 ### Phase 3: MCP Server Implementation
 1. Set up FastMCP server with STDIO transport
@@ -88,7 +93,7 @@ notes-querier-mcp/
 1. Create Claude Desktop configuration
 2. Test MCP server connection
 3. Validate tool functionality through Claude Desktop
-4. Configure appropriate database access permissions
+4. Configure appropriate AppleScript automation permissions
 
 ### Phase 5: Advanced Features
 1. Implement semantic search capabilities
@@ -122,16 +127,18 @@ Once implemented, you'll be able to query your notes through Claude Desktop:
 ```
 
 ## Security Considerations
-- Notes database contains personal information
-- Implement read-only access to prevent accidental modifications
-- Handle encrypted/password-protected notes gracefully
+- Notes data contains personal information
+- AppleScript provides read-only access by default
+- Handle AppleScript permission requests gracefully
 - Respect macOS privacy and security permissions
+- Process HTML content safely to prevent injection attacks
 
 ## Testing Strategy
-- Unit tests for notes reader functionality
-- Mock database for testing without real Notes data
-- Integration tests with sample Notes database
+- Unit tests for AppleScript execution and parsing
+- Mock AppleScript responses for testing without Notes.app
+- Integration tests with actual Notes data
 - Validation of MCP protocol compliance
+- HTML content parsing accuracy tests
 
 ## Future Enhancements
 - Support for note creation/modification (if needed)
